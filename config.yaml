@@ -1,0 +1,96 @@
+# 心脏MRI分割配置文件
+
+# 数据集配置
+dataset:
+  name: "MNMS"
+  data_dir: "./data/MNMS"
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  num_workers: 4
+  cache_data: false
+
+# 数据处理配置
+preprocessing:
+  image_size: [224, 224]  # 输入图像大小
+  normalize: true
+  normalize_mean: 0.5
+  normalize_std: 0.5
+  clip_range: [-100, 300]  # HU值范围
+
+# 数据增强配置
+augmentation:
+  train:
+    enable: true
+    rotation_angle: 15
+    flip_prob: 0.5
+    elastic_deformation: 0.3
+    gaussian_noise_std: 0.01
+    brightness_contrast: 0.2
+  val:
+    enable: false
+
+# 模型配置
+model:
+  name: "UNet3Plus"
+  in_channels: 1
+  out_channels: 4  # 背景 + LV + RV + MYO
+  encoder_channels: [64, 128, 256, 512]
+  decoder_channels: [256, 128, 64, 32]
+  deep_supervision: true
+  use_batch_norm: true
+
+# 损失函数配置
+loss:
+  name: "DiceCELoss"
+  dice_weight: 0.5
+  ce_weight: 0.5
+  class_weights: [0.1, 1.0, 1.0, 1.0]  # 背景权重较小
+
+# 优化器配置
+optimizer:
+  name: "Adam"
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-5
+  betas: [0.9, 0.999]
+
+# 学习率调度器配置
+scheduler:
+  name: "CosineAnnealingWarmRestarts"
+  t_0: 10
+  t_mult: 2
+  eta_min: 1.0e-6
+
+# 训练配置
+training:
+  num_epochs: 100
+  batch_size: 16
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  eval_interval: 1  # 每N个epoch评估一次
+  save_interval: 5
+  early_stopping_patience: 20
+  early_stopping_metric: "dice"
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+
+# 验证/测试配置
+evaluation:
+  batch_size: 32
+  metrics: ["dice", "iou", "hausdorff", "sensitivity", "specificity"]
+  save_predictions: true
+  save_dir: "./predictions"
+
+# 推理配置
+inference:
+  tta_enabled: false  # Test Time Augmentation
+  tta_num_transforms: 5
+  device: "cuda"
+  ensemble: false
+
+# 其他配置
+misc:
+  seed: 42
+  device: "cuda"
+  mixed_precision: true
+  verbose: true
